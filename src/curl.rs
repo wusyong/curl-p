@@ -28,26 +28,20 @@ impl fmt::Debug for Curl {
     }
 }
 
-impl Curl {
-    // TODO: return with Result, define proper error type
-    pub fn new(rounds: usize) -> Curl {
-        let mut curl = Curl::default();
-        curl.rounds = rounds;
-        curl
-    }
+impl Sponge for Curl
+where
+    Self: Send + 'static,
+{
+    type Item = Trit;
 
-    pub fn state(&self) -> &[Trit] {
-        &self.state
-    }
-
-    pub fn absorb(&mut self, trits: &[Trit]) {
+    fn absorb(&mut self, trits: &[Self::Item]) {
         for c in trits.chunks(HASH_LENGTH) {
             self.state[0..c.len()].copy_from_slice(c);
             self.transform();
         }
     }
 
-    pub fn squeeze(&mut self, out: &mut [Trit]) {
+    fn squeeze(&mut self, out: &mut [Self::Item]) {
         let trit_count = out.len();
         let hash_count = trit_count / HASH_LENGTH;
 
@@ -63,8 +57,21 @@ impl Curl {
         }
     }
 
-    pub fn reset(&mut self) {
+    fn reset(&mut self) {
         self.state = [0; STATE_LENGTH];
+    }
+}
+
+impl Curl {
+    // TODO: return with Result, define proper error type
+    pub fn new(rounds: usize) -> Curl {
+        let mut curl = Curl::default();
+        curl.rounds = rounds;
+        curl
+    }
+
+    pub fn state(&self) -> &[Trit] {
+        &self.state
     }
 
     fn transform(&mut self) {
@@ -85,5 +92,18 @@ impl Curl {
                 state_out[state_index] = TRUTH_TABLE[idx];
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn curl_works() {
+        let transaction = [0i8; 8019];
+        let mut tx_hash = [0i8; 243];
+        let mut curl = Curl::default();
+        curl.digest(&transaction, &mut tx_hash);
     }
 }

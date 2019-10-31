@@ -4,13 +4,13 @@
 name = "curl-p"
 version = "0.1.0"
 dependencies = [
- "sponge-preview 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sponge-preview 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "sponge-preview"
-version = "0.1.0"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [metadata]
-"checksum sponge-preview 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "4bd35fc2961ec08a9ab722d5cc9b8e0efd10e6121e2746044df1026833c8e7bb"
+"checksum sponge-preview 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "a55eaf9b81e44883f1222759769c7b38efe875dff42c18918d07600c86267b1c"

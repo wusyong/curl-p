@@ -1,5 +1,4 @@
 use crate::constants::*;
-use crate::Sponge;
 use core::fmt;
 
 #[derive(Clone, Copy)]
@@ -28,20 +27,17 @@ impl fmt::Debug for Curl {
     }
 }
 
-impl Sponge for Curl
-where
-    Self: Send + 'static,
-{
-    type Item = Trit;
-
-    fn absorb(&mut self, trits: &[Self::Item]) {
+impl Curl {
+    /// Absorb trits into the sponge
+    pub fn absorb(&mut self, trits: &[Trit]) {
         for c in trits.chunks(HASH_LENGTH) {
             self.state[0..c.len()].copy_from_slice(c);
             self.transform();
         }
     }
 
-    fn squeeze(&mut self, out: &mut [Self::Item]) {
+    /// Squeeze trits out of the sponge and copy them into `out`
+    pub fn squeeze(&mut self, out: &mut [Trit]) {
         let trit_count = out.len();
         let hash_count = trit_count / HASH_LENGTH;
 
@@ -57,12 +53,17 @@ where
         }
     }
 
-    fn reset(&mut self) {
+    /// Reset the sponge to initial state
+    pub fn reset(&mut self) {
         self.state = [0; STATE_LENGTH];
     }
-}
 
-impl Curl {
+    /// Digest inputs and then compute the hash with length of provided output slice
+    pub fn digest (&mut self, input: &[Trit], output: &mut [Trit]) {
+        self.absorb(input);
+        self.squeeze(output);
+    }
+
     // TODO: return with Result, define proper error type
     pub fn new(rounds: usize) -> Curl {
         let mut curl = Curl::default();

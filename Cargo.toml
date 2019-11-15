@@ -1,6 +1,6 @@
 [package]
 name = "curl-p"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Yu-Wei Wu <wusyong9104@gmail.com>"]
 edition = "2018"
 license = "MIT"
@@ -9,5 +9,10 @@ description = "Curl-p implementation in Rust"
 [lib]
 name = "curl"
 
-[dependencies]
-sponge-preview = "0.2.0"
+[dev-dependencies]
+criterion = "0.2"
+rand = "0.6"
+
+[[bench]]
+name = "random_hash"
+harness = false

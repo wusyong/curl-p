@@ -32,7 +32,9 @@ impl Curl {
     pub fn absorb(&mut self, trits: &[Trit]) {
         for c in trits.chunks(HASH_LENGTH) {
             self.state[0..c.len()].copy_from_slice(c);
-            self.transform();
+            unsafe {
+                self.unsafe_transform();
+            }
         }
     }
 
@@ -43,13 +45,17 @@ impl Curl {
 
         for c in out.chunks_mut(HASH_LENGTH) {
             c.copy_from_slice(&self.state[0..HASH_LENGTH]);
-            self.transform();
+            unsafe {
+                self.unsafe_transform();
+            }
         }
 
         let last = trit_count - hash_count * HASH_LENGTH;
         out[trit_count - last..].copy_from_slice(&self.state[0..last]);
         if trit_count % HASH_LENGTH != 0 {
-            self.transform();
+            unsafe {
+                self.unsafe_transform();
+            }
         }
     }
 
@@ -59,7 +65,7 @@ impl Curl {
     }
 
     /// Digest inputs and then compute the hash with length of provided output slice
-    pub fn digest (&mut self, input: &[Trit], output: &mut [Trit]) {
+    pub fn digest(&mut self, input: &[Trit], output: &mut [Trit]) {
         self.absorb(input);
         self.squeeze(output);
     }
@@ -75,6 +81,7 @@ impl Curl {
         &self.state
     }
 
+    #[allow(dead_code)]
     fn transform(&mut self) {
         let mut local_state: [Trit; STATE_LENGTH] = [0; STATE_LENGTH];
 
@@ -92,6 +99,30 @@ impl Curl {
 
                 state_out[state_index] = TRUTH_TABLE[idx];
             }
+        }
+    }
+
+    unsafe fn unsafe_transform(&mut self) {
+        let mut local_state: [Trit; STATE_LENGTH] = [0; STATE_LENGTH];
+        local_state.copy_from_slice(&self.state);
+
+        let mut t: *mut i8;
+        let mut s1 = self.state.as_mut_ptr();
+        let mut s2 = local_state.as_mut_ptr();
+
+        for _ in 0..self.rounds {
+            *s1 = TRUTH_TABLE[(*s2 + (*s2.offset(364) << 2) + 5) as usize];
+
+            for i in 0..364 {
+                *s1.offset(2 * i + 1) = TRUTH_TABLE
+                    [(*s2.offset(364 - i) + (*s2.offset(729 - (i + 1)) << 2) + 5) as usize];
+                *s1.offset(2 * i + 2) = TRUTH_TABLE
+                    [(*s2.offset(729 - (i + 1)) + (*s2.offset(364 - (i + 1)) << 2) + 5) as usize];
+            }
+
+            t = s1;
+            s1 = s2;
+            s2 = t;
         }
     }
 }

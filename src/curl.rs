@@ -83,25 +83,29 @@ impl Curl {
 
     #[allow(dead_code)]
     fn transform(&mut self) {
+        let mut scratchpad_index = 0;
         let mut local_state: [Trit; STATE_LENGTH] = [0; STATE_LENGTH];
 
-        for round in 0..self.rounds {
-            let (state_out, state) = if round % 2 == 0 {
-                (&mut local_state, &self.state)
-            } else {
-                (&mut self.state, &local_state)
-            };
+        for _ in 0..self.rounds {
+            local_state.copy_from_slice(&self.state);
 
             for state_index in 0..STATE_LENGTH {
-                let idx: usize = (state[TRANSFORM_INDICES[state_index]] as usize)
-                    .wrapping_add((state[TRANSFORM_INDICES[state_index + 1]] as usize) << 2)
-                    .wrapping_add(5);
+                let prev_scratchpad_index = scratchpad_index;
+                if prev_scratchpad_index < 365 {
+                    scratchpad_index += 364;
+                } else {
+                    scratchpad_index -= 365;
+                }
 
-                state_out[state_index] = TRUTH_TABLE[idx];
+                let idx: usize = (local_state[prev_scratchpad_index]
+                    + (local_state[scratchpad_index] << 2)
+                    + 5) as usize;
+
+                self.state[state_index] = TRUTH_TABLE[idx];
             }
         }
     }
-
+    
     unsafe fn unsafe_transform(&mut self) {
         let mut local_state: [Trit; STATE_LENGTH] = [0; STATE_LENGTH];
         local_state.copy_from_slice(&self.state);

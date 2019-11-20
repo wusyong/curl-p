@@ -32,9 +32,7 @@ impl Curl {
     pub fn absorb(&mut self, trits: &[Trit]) {
         for c in trits.chunks(HASH_LENGTH) {
             self.state[0..c.len()].copy_from_slice(c);
-            unsafe {
-                self.unsafe_transform();
-            }
+            self.transform();
         }
     }
 
@@ -45,17 +43,13 @@ impl Curl {
 
         for c in out.chunks_mut(HASH_LENGTH) {
             c.copy_from_slice(&self.state[0..HASH_LENGTH]);
-            unsafe {
-                self.unsafe_transform();
-            }
+            self.transform();
         }
 
         let last = trit_count - hash_count * HASH_LENGTH;
         out[trit_count - last..].copy_from_slice(&self.state[0..last]);
         if trit_count % HASH_LENGTH != 0 {
-            unsafe {
-                self.unsafe_transform();
-            }
+            self.transform();
         }
     }
 
@@ -80,53 +74,27 @@ impl Curl {
     pub fn state(&self) -> &[Trit] {
         &self.state
     }
-
-    #[allow(dead_code)]
-    fn transform(&mut self) {
-        let mut scratchpad_index = 0;
-        let mut local_state: [Trit; STATE_LENGTH] = [0; STATE_LENGTH];
-
-        for _ in 0..self.rounds {
-            local_state.copy_from_slice(&self.state);
-
-            for state_index in 0..STATE_LENGTH {
-                let prev_scratchpad_index = scratchpad_index;
-                if prev_scratchpad_index < 365 {
-                    scratchpad_index += 364;
-                } else {
-                    scratchpad_index -= 365;
-                }
-
-                let idx: usize = (local_state[prev_scratchpad_index]
-                    + (local_state[scratchpad_index] << 2)
-                    + 5) as usize;
-
-                self.state[state_index] = TRUTH_TABLE[idx];
-            }
-        }
-    }
     
-    unsafe fn unsafe_transform(&mut self) {
+    fn transform(&mut self) {
         let mut local_state: [Trit; STATE_LENGTH] = [0; STATE_LENGTH];
         local_state.copy_from_slice(&self.state);
 
-        let mut t: *mut i8;
         let mut s1 = self.state.as_mut_ptr();
         let mut s2 = local_state.as_mut_ptr();
 
-        for _ in 0..self.rounds {
-            *s1 = TRUTH_TABLE[(*s2 + (*s2.offset(364) << 2) + 5) as usize];
+        unsafe {
+            for _ in 0..self.rounds {
+                *s1 = TRUTH_TABLE[(*s2 + (*s2.offset(364) << 2) + 5) as usize];
 
-            for i in 0..364 {
-                *s1.offset(2 * i + 1) = TRUTH_TABLE
-                    [(*s2.offset(364 - i) + (*s2.offset(729 - (i + 1)) << 2) + 5) as usize];
-                *s1.offset(2 * i + 2) = TRUTH_TABLE
-                    [(*s2.offset(729 - (i + 1)) + (*s2.offset(364 - (i + 1)) << 2) + 5) as usize];
+                for i in 0..364 {
+                    *s1.offset(2 * i + 1) = TRUTH_TABLE
+                        [(*s2.offset(364 - i) + (*s2.offset(729 - (i + 1)) << 2) + 5) as usize];
+                    *s1.offset(2 * i + 2) = TRUTH_TABLE
+                        [(*s2.offset(729 - (i + 1)) + (*s2.offset(364 - (i + 1)) << 2) + 5) as usize];
+                }
+
+                core::mem::swap(&mut s1, &mut s2);
             }
-
-            t = s1;
-            s1 = s2;
-            s2 = t;
         }
     }
 }

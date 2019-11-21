@@ -10,7 +10,7 @@ use rand::{thread_rng, Rng};
 fn basic_curl(trits: &[i8]) {
     let mut curl = Curl::default();
     let mut hash = vec![0; 243];
-    curl.digest(&trits, &mut hash);
+    curl.digest_into(&trits, &mut hash);
 }
 
 fn stateless_curl(trits: &[i8]) {

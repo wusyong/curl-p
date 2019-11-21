@@ -36,8 +36,14 @@ impl Curl {
         }
     }
 
+    pub fn squeeze(&mut self) ->  [Trit; HASH_LENGTH] {
+        let mut output: [Trit; HASH_LENGTH] = [0; HASH_LENGTH];
+        self.squeeze_into(&mut output);
+        output
+    }
+
     /// Squeeze trits out of the sponge and copy them into `out`
-    pub fn squeeze(&mut self, out: &mut [Trit]) {
+    pub fn squeeze_into(&mut self, out: &mut [Trit]) {
         let trit_count = out.len();
         let hash_count = trit_count / HASH_LENGTH;
 
@@ -51,17 +57,22 @@ impl Curl {
         if trit_count % HASH_LENGTH != 0 {
             self.transform();
         }
-    }
+    } 
 
     /// Reset the sponge to initial state
     pub fn reset(&mut self) {
         self.state = [0; STATE_LENGTH];
     }
 
-    /// Digest inputs and then compute the hash with length of provided output slice
-    pub fn digest(&mut self, input: &[Trit], output: &mut [Trit]) {
+    pub fn digest(&mut self, input: &[Trit]) ->  [Trit; HASH_LENGTH] {
         self.absorb(input);
-        self.squeeze(output);
+        self.squeeze()
+    }
+
+    /// Digest inputs and then compute the hash with length of provided output slice
+    pub fn digest_into(&mut self, input: &[Trit], output: &mut [Trit]) {
+        self.absorb(input);
+        self.squeeze_into(output);
     }
 
     // TODO: return with Result, define proper error type
@@ -104,10 +115,16 @@ mod tests {
     use super::*;
 
     #[test]
-    fn curl_works() {
+    fn curl_digest() {
         let transaction = [0i8; 8019];
-        let mut tx_hash = [0i8; 243];
+        let mut tx_hash1 = [0i8; 243];
         let mut curl = Curl::default();
-        curl.digest(&transaction, &mut tx_hash);
+        curl.digest_into(&transaction, &mut tx_hash1);
+        curl.reset();
+        let tx_hash2 = curl.digest(&transaction);
+
+        for i in 0..243 {
+            assert_eq!(tx_hash1[i], tx_hash2[i]);
+        }
     }
 }
